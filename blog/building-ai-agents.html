@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Building a Household AI Agent with Claude Tool Use — Ashish Desai</title>
+<meta name="description" content="How I wired up a multi-step tool-use loop that can recognize pantry items from a photo and manage inventory — and what I learned building it.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="post.css">
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+
+<nav class="nav">
+    <a href="/" class="nav-logo"><span class="name">ashishdesai</span><span class="tld">.tech</span></a>
+    <div class="nav-links">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/about.html" class="nav-link">About</a>
+        <a href="/blog/" class="nav-link">Blog</a>
+    </div>
+    <div class="nav-icons">
+        <a href="https://github.com/ash1shdesa1" target="_blank" rel="noopener" class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/></svg></a>
+        <a href="https://linkedin.com/in/ashishdesai" target="_blank" rel="noopener" class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg></a>
+    </div>
+    <button class="hamburger" id="ham"><span></span><span></span><span></span></button>
+</nav>
+<div class="mobile-menu" id="mob">
+    <a href="/" class="mobile-nav-link">Home</a>
+    <a href="/about.html" class="mobile-nav-link">About</a>
+    <a href="/blog/" class="mobile-nav-link">Blog</a>
+</div>
+
+<main>
+<div class="post-wrap">
+    <header class="post-header">
+        <a href="/blog/" class="post-back">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+            All posts
+        </a>
+        <div class="post-meta">
+            <span class="post-date-label">June 2026</span>
+            <span class="chip">AI Agents</span>
+            <span class="chip">Claude</span>
+            <span class="chip">FastAPI</span>
+        </div>
+        <h1 class="post-title">Building a Household AI Agent with Claude Tool Use</h1>
+        <p class="post-lead">How I wired up a multi-step tool-use loop that can recognize pantry items from a photo, look up what's in stock, and decide what to add — and what the experience taught me about building agentic systems.</p>
+    </header>
+
+    <hr class="divider">
+
+    <article class="post-body">
+        <div class="prose">
+
+<p>I've been building a household inventory manager as a side project. The premise is simple: take a photo of your pantry, and the system figures out what's there, what's running low, and what you could make for dinner. Simple enough as an idea. Surprisingly instructive as a build.</p>
+
+<p>The interesting part isn't the inventory database or the mobile app. It's the agent in the middle — a Claude-powered reasoning loop that has tools for seeing, looking things up, and updating records. Getting that loop right took longer than I expected.</p>
+
+<h2>The architecture</h2>
+
+<p>The stack is: <strong>FastAPI backend</strong>, <strong>PostgreSQL</strong> for storage, <strong>Expo / React Native</strong> for the mobile app, and the <strong>Anthropic Claude API</strong> for the agent and vision. Everything runs in Docker.</p>
+
+<p>The agent is a standard tool-use loop: call Claude with a message and a list of tools, check if Claude wants to call a tool, execute it, feed the result back, repeat until Claude gives a final answer. The version I have runs for up to 20 iterations with a 4,096-token output budget per turn.</p>
+
+<p>The tools the agent has access to:</p>
+
+<ul>
+    <li><code>get_inventory</code> — list all items with current stock levels</li>
+    <li><code>get_low_stock</code> — items below a set threshold</li>
+    <li><code>adjust_stock</code> — decrement or increment quantity</li>
+    <li><code>add_item</code> — create a new item with initial stock</li>
+    <li><code>update_item</code> — change an item's name, category, or unit</li>
+    <li><code>list_categories</code> / <code>list_locations</code> — context for organizing items</li>
+    <li><code>create_category</code> — if a needed category doesn't exist</li>
+</ul>
+
+<p>Photo recognition is handled separately. When you send a photo, it goes to a dedicated <code>/agent/recognize-photo</code> endpoint that calls Claude Vision with a base64-encoded image and asks it to return structured JSON — a list of items with name, estimated quantity, unit, and suggested category. That list gets formatted as a text message and dropped into the agent chat, where the agent can then call <code>add_item</code> in a loop to create them all.</p>
+
+<h2>What I got wrong first</h2>
+
+<p>My first version had 4 tools and a 10-iteration limit. It fell apart on anything that required more than two steps. "Add a dozen eggs and some olive oil" would sometimes add the eggs but forget the oil. The agent was hitting the iteration cap before finishing.</p>
+
+<p>Bumping to 20 iterations and 4,096 tokens helped — but more importantly, I rewrote the system prompt. The original was too sparse. Claude is good at reasoning, but it still needs clear instructions about <em>when</em> to use which tool and in what order.</p>
+
+<p>The rewrite told the agent to:</p>
+
+<ol>
+    <li>Call <code>list_categories</code> first when adding new items, so it can assign proper categories rather than guessing</li>
+    <li>Check existing inventory before creating new items to avoid duplicates</li>
+    <li>Confirm quantities and units with the user if the input is ambiguous</li>
+</ol>
+
+<p>That alone cut most of the failure modes.</p>
+
+<h2>The vision part is easier than you'd think</h2>
+
+<p>I was bracing for vision to be the hard part. It wasn't. Claude's vision is genuinely good at identifying packaged food items. You send a base64-encoded image inside a message content block, ask for structured JSON, and it reliably comes back with a list of recognizable items.</p>
+
+<pre><code>content = [
+    {
+        "type": "image",
+        "source": {
+            "type": "base64",
+            "media_type": "image/jpeg",
+            "data": base64_image,
+        },
+    },
+    {
+        "type": "text",
+        "text": "Identify all visible pantry/food items. Return JSON array: [{name, quantity, unit, suggested_category}]"
+    }
+]</code></pre>
+
+<p>The bigger challenge was mobile camera quality and framing. A well-lit photo of organized shelves is identified almost perfectly. A dark, cluttered photo of a messy pantry is much harder. I ended up setting the mobile app to compress images to 70% quality (smaller payload, faster) and prompt the user to aim the camera at one shelf at a time.</p>
+
+<h2>What I'd build differently</h2>
+
+<p>A few things I'd change if I were starting over:</p>
+
+<p><strong>Separate the read and write tools more clearly.</strong> Right now the agent can call <code>get_inventory</code> and <code>add_item</code> in the same turn. That's fine, but it means I need careful prompt guidance to prevent unnecessary reads. A cleaner design might split the agent into two phases: a planning phase (read-only tools) and an execution phase (write tools).</p>
+
+<p><strong>Add a confirmation step for bulk adds.</strong> When recognizing from a photo, the agent might try to add 12 items at once. If one call fails mid-way (network issue, duplicate item), the state ends up inconsistent. I should buffer the add requests and execute them as a transaction.</p>
+
+<p><strong>Evaluate the system prompt properly.</strong> I've been tuning the prompt by hand, which works but doesn't scale. I want to build a small eval suite — a set of example user messages and expected tool call sequences — and run it every time I change the prompt.</p>
+
+<h2>Is the project useful?</h2>
+
+<p>Genuinely, yes. I've been using it for a few months. The thing I use most is the low stock alert — I've stopped running out of things I go through regularly. The photo recognition is a party trick that's occasionally useful for a big restock after grocery shopping.</p>
+
+<p>More than the app itself, though, building it has been a good test of how agentic systems behave in practice. The failure modes are predictable once you've seen them: ambiguous instructions, running out of context, tools that return inconsistent data. None of them are hard to fix if you're watching for them.</p>
+
+<p>The code is on <a href="https://github.com/ash1shdesa1/inventory" target="_blank" rel="noopener">GitHub</a> if you want to dig in.</p>
+
+        </div>
+
+        <div class="post-nav">
+            <a href="/blog/">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+                All posts
+            </a>
+            <a href="/blog/starting-solvbit.html">
+                Why I Started Solvbit
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+        </div>
+    </article>
+</div>
+</main>
+
+<footer class="footer">
+    <div class="wrap">
+        <div class="footer-inner">
+            <div class="footer-left">© 2026 Ashish Desai · <a href="https://solvbit.com">Solvbit</a></div>
+            <div class="footer-right">
+                <a href="https://github.com/ash1shdesa1" target="_blank" rel="noopener" class="footer-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/></svg></a>
+            </div>
+        </div>
+    </div>
+</footer>
+<div class="toast" id="toast"><span id="toast-msg"></span></div>
+<script src="../app.js"></script>
+</body>
+</html>

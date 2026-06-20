@@ -1,0 +1,94 @@
+/* ── Shared blog post styles ─────────────────── */
+.post-wrap{
+    max-width:680px;
+    margin:0 auto;
+    padding:0 clamp(1.25rem,5vw,2.5rem);
+    position:relative;z-index:1;
+}
+
+.post-header{padding:clamp(3.5rem,8vw,6rem) 0 2.5rem}
+.post-back{
+    display:inline-flex;align-items:center;gap:.4rem;
+    font-family:var(--mono);font-size:.75rem;color:var(--text3);
+    margin-bottom:2rem;
+    transition:color var(--t);
+}
+.post-back:hover{color:var(--cyan)}
+.post-meta{
+    display:flex;align-items:center;gap:.75rem;
+    flex-wrap:wrap;margin-bottom:1rem;
+}
+.post-date-label{
+    font-family:var(--mono);font-size:.72rem;color:var(--text3);
+}
+.post-title{
+    font-size:clamp(1.75rem,5vw,2.75rem);
+    font-weight:800;line-height:1.12;
+    letter-spacing:-1.25px;margin-bottom:1rem;
+}
+.post-lead{
+    font-size:1.1rem;color:var(--text2);line-height:1.75;
+}
+
+/* Article body */
+.post-body{
+    padding-bottom:clamp(4rem,8vw,6rem);
+}
+.prose{font-size:1rem;line-height:1.85;color:var(--text)}
+.prose h2{
+    font-size:1.35rem;font-weight:700;
+    letter-spacing:-.4px;
+    margin:2.5rem 0 .85rem;
+    color:var(--text);
+}
+.prose h3{
+    font-size:1.1rem;font-weight:700;
+    margin:2rem 0 .6rem;color:var(--text);
+}
+.prose p{margin-bottom:1.25rem;color:var(--text2)}
+.prose a{color:var(--cyan);transition:opacity var(--t)}
+.prose a:hover{opacity:.7}
+.prose strong{color:var(--text)}
+.prose ul,.prose ol{
+    margin-bottom:1.25rem;padding-left:1.5rem;
+    color:var(--text2);
+}
+.prose li{margin-bottom:.4rem}
+.prose code{
+    font-family:var(--mono);font-size:.875em;
+    background:var(--bg3);
+    padding:.15em .4em;
+    border-radius:4px;color:var(--cyan);
+}
+.prose pre{
+    background:var(--bg2);border:1px solid var(--border);
+    border-radius:var(--rl);padding:1.25rem 1.5rem;
+    margin-bottom:1.5rem;overflow-x:auto;
+}
+.prose pre code{
+    background:none;padding:0;color:var(--text2);font-size:.85rem;
+}
+.prose blockquote{
+    border-left:3px solid var(--cyan);
+    padding:.5rem 0 .5rem 1.25rem;
+    margin:1.5rem 0;color:var(--text2);
+    font-style:italic;
+}
+.prose hr{
+    border:none;border-top:1px solid var(--border);
+    margin:2.5rem 0;
+}
+
+/* Post nav */
+.post-nav{
+    display:flex;justify-content:space-between;
+    padding:2rem 0;
+    border-top:1px solid var(--border);
+    gap:1rem;flex-wrap:wrap;
+}
+.post-nav a{
+    font-size:.875rem;color:var(--text2);
+    display:flex;align-items:center;gap:.4rem;
+    transition:color var(--t);
+}
+.post-nav a:hover{color:var(--cyan)}
